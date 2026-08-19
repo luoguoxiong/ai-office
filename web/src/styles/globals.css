@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ================================================
+   全局隐藏所有滚动条（保留滚动能力）
+   覆盖所有元素，包括 SyntaxHighlighter / iframe 内部容器
+   ================================================ */
+
+/* WebKit / Blink 内核（Chrome / Safari / Edge） */
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent !important;
+  display: none !important;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+  display: none !important;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
+}
+
+/* IE / 旧版 Edge */
+* {
+  -ms-overflow-style: none !important;
+}
+
+/* 保留工具类（兼容性） */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

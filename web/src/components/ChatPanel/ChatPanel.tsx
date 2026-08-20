@@ -53,81 +53,50 @@ export function ChatPanel() {
         : `💬 当前会话: ${currentSessionKey}  — 独立上下文`;
 
   return (
-    <aside className="w-96 shrink-0 border-l border-neutral-700 bg-neutral-800 flex flex-col min-h-0">
-      {/* 头部:标题 + 模型切换 + 管理器按钮 + 清空 */}
-      <div className="flex items-center px-3 border-b border-neutral-700/60 gap-2 shrink-0 py-1.5">
-        <span className="text-sm font-medium text-neutral-200">🤖 AI 助手</span>
+    <aside className="relative w-96 shrink-0 border-l border-white/5 bg-neutral-850/60 flex flex-col min-h-0">
+      {/* 头部:标题 + 清空(模型切换已移至底部工具栏) */}
+      <div className="flex items-center px-3 h-10 border-b border-white/5 gap-2 shrink-0 surface-gradient">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_4px] shadow-green-400/60" />
+          <span className="text-sm font-semibold text-neutral-100">AI 助手</span>
+        </div>
         <div className="flex-1" />
-
-        {/* 模型快速切换下拉(仅显示已保存配置) */}
-        <select
-          value={activeModelId ?? ''}
-          onChange={(e) => setActiveModelId(e.target.value || null)}
-          className="text-xs bg-neutral-900 text-neutral-200 border border-neutral-600 rounded px-1.5 py-1 max-w-[160px] focus:outline-none focus:border-blue-500"
-          title={activeModel ? `当前:${activeModel.name}` : '选择已保存的模型(点击 🧰 添加)'}
-        >
-          <option value="">
-            {savedModels.length === 0 ? '(先点击 🧰 添加模型)' : '(请选择模型)'}
-          </option>
-          {savedModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-              {m.apiKey ? '' : ' ⚠️缺Key'}
-            </option>
-          ))}
-        </select>
-
-        <button
-          onClick={() => setShowManager((v) => !v)}
-          className={`text-xs px-1.5 py-1 rounded transition-colors ${
-            showManager
-              ? 'bg-blue-600 text-white'
-              : 'hover:bg-neutral-700 text-neutral-400'
-          }`}
-          title={
-            savedModels.length === 0
-              ? '还没有模型配置 - 点击打开管理器添加'
-              : `已保存 ${savedModels.length} 个模型 - 点击打开管理器`
-          }
-        >
-          🧰
-        </button>
-
         <button
           onClick={clear}
           disabled={streaming}
-          className="text-xs px-1.5 py-1 rounded hover:bg-neutral-700 disabled:opacity-40 text-neutral-400"
+          className="text-xs px-1.5 py-1 rounded-md hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-neutral-400 hover:text-neutral-200"
           title="清空对话"
         >
           🗑️
         </button>
       </div>
 
-      {/* 模型配置管理器(展开式) */}
-      {showManager && <ModelManager />}
-
       {/* 会话归属提示(文件上下文隔离提示) */}
-      <div className="shrink-0 px-3 py-1.5 border-b border-neutral-700/60 bg-neutral-900/40 flex items-center justify-between gap-2">
+      <div className="shrink-0 px-3 h-7 border-b border-white/5 bg-neutral-900/30 flex items-center justify-between gap-2">
         <span
-          className="text-[11px] text-neutral-400 truncate"
+          className="text-[11px] truncate flex items-center gap-1.5 min-w-0"
           title={sessionHint}
         >
           {currentSessionKey === GLOBAL_SESSION_KEY ? (
-            <span className="text-neutral-500">🌐 通用会话</span>
+            <>
+              <span className="text-neutral-500">🌐</span>
+              <span className="text-neutral-500">通用会话</span>
+            </>
           ) : (
             <>
-              <span className="text-blue-400">📄 文件上下文:</span>{' '}
-              <span className="text-neutral-300">
+              <span className="text-blue-400">📄</span>
+              <span className="text-neutral-500">上下文:</span>
+              <span className="text-neutral-300 truncate">
                 {activeTab?.name ?? activePath ?? currentSessionKey}
               </span>
             </>
           )}
         </span>
         <span
-          className="text-[10px] text-neutral-500 shrink-0"
+          className="text-[10px] text-neutral-600 shrink-0 tabular-nums"
           title={`已保存 ${sessionCount} 个会话上下文`}
         >
-          会话:{sessionCount}
+          {sessionCount} 会话
         </span>
       </div>
 
@@ -143,7 +112,26 @@ export function ChatPanel() {
         activeFilePath={activePath}
         activeFileName={activeTab?.name}
         activeFileExt={activeTab?.ext}
+        onToggleSettings={() => setShowManager((v) => !v)}
+        settingsOpen={showManager}
+        models={savedModels}
+        activeModelId={activeModelId}
+        onSelectModel={setActiveModelId}
       />
+
+      {/* 模型配置面板(从最底部弹起,向上展开) */}
+      {showManager && (
+        <>
+          {/* 点击遮罩关闭(盖住面板上方区域) */}
+          <div
+            className="absolute inset-0 z-20"
+            onClick={() => setShowManager(false)}
+          />
+          <div className="absolute left-0 right-0 bottom-0 z-30">
+            <ModelManager onClose={() => setShowManager(false)} />
+          </div>
+        </>
+      )}
     </aside>
   );
 }

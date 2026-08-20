@@ -15,7 +15,30 @@
  *  - 所有关键路径带日志(可复现性):[officecli:xxx] 开始/结束/耗时/参数(敏感内容截断)
  */
 import { spawn, type ChildProcess } from 'node:child_process';
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
 import path from 'node:path';
+
+/**
+ * 解析 officecli 二进制路径:
+ * 1. 优先从本地 node_modules/@officecli/officecli/vendor/officecli 解析
+ * 2. 回退到 PATH 中的全局 officecli
+ */
+export function resolveOfficeCliBin(): string {
+  try {
+    const require = createRequire(import.meta.url);
+    const pkgJsonPath = require.resolve('@officecli/officecli/package.json');
+    const pkgDir = path.dirname(pkgJsonPath);
+    const binName = process.platform === 'win32' ? 'officecli.exe' : 'officecli';
+    const binPath = path.join(pkgDir, 'vendor', binName);
+    if (fs.existsSync(binPath)) return binPath;
+  } catch {
+    // 本地未安装,回退到 PATH 全局命令
+  }
+  return 'officecli';
+}
+
+const OFFICECLI_BIN = resolveOfficeCliBin();
 
 const RUN_TIMEOUT_MS = 120_000;
 /** SIGTERM 后等待多久再 SIGKILL */
@@ -77,7 +100,7 @@ async function runOfficeCli(args: string[]): Promise<string> {
 
   try {
     return await new Promise<string>((resolve, reject) => {
-      proc = spawn('officecli', args, {
+      proc = spawn(OFFICECLI_BIN, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       let stdout = '';
@@ -92,7 +115,7 @@ async function runOfficeCli(args: string[]): Promise<string> {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
           reject(
             new OfficeCliError(
-              '未检测到 officecli,请先安装:npm i -g @officecli/officecli 或 brew install officecli',
+              '未检测到 officecli,请先安装:npm i -g @officecli/officecli 或在项目中 pnpm add @officecli/officecli',
             ),
           );
         } else {
@@ -132,7 +155,7 @@ async function runOfficeCli(args: string[]): Promise<string> {
 /** officecli 是否已安装 —— 单独实现(避免递归,失败立刻返回 false) */
 export async function officecliAvailable(): Promise<boolean> {
   return await new Promise<boolean>((resolve) => {
-    const proc = spawn('officecli', ['--version'], { stdio: ['ignore', 'ignore', 'ignore'] });
+    const proc = spawn(OFFICECLI_BIN, ['--version'], { stdio: ['ignore', 'ignore', 'ignore'] });
     const t = setTimeout(() => {
       killProc(proc);
       resolve(false);

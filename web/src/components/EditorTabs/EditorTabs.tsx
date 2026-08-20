@@ -56,15 +56,15 @@ export function EditorTabs() {
 
   return (
     <div
-      className="flex items-stretch h-9 border-b border-neutral-700 bg-neutral-800 overflow-x-auto no-scrollbar"
+      className="flex items-stretch h-9 border-b border-white/5 bg-neutral-850/60 overflow-x-auto no-scrollbar"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' as const }}
     >
       {items.map((item) => {
         const isLoading = item.type === 'loading';
-        const baseBtn = `group flex items-center gap-1.5 px-3 cursor-pointer border-r border-neutral-700/60 text-sm select-none whitespace-nowrap transition-colors`;
+        const baseBtn = `group relative flex items-center gap-1.5 px-3 cursor-pointer border-r border-white/5 text-sm select-none whitespace-nowrap`;
         const activeBtn = item.isActive
-          ? 'bg-neutral-900 text-neutral-100 border-t-2 border-t-blue-500'
-          : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700/50 border-t-2 border-t-transparent';
+          ? 'bg-neutral-900 text-neutral-100'
+          : 'bg-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200';
         return (
           <div
             key={`${item.type}:${item.path}`}
@@ -72,6 +72,10 @@ export function EditorTabs() {
             className={`${baseBtn} ${activeBtn}`}
             title={item.path}
           >
+            {/* 活动指示条：底部蓝线 */}
+            {item.isActive && (
+              <span className="absolute left-0 right-0 bottom-0 h-[2px] bg-blue-500" />
+            )}
             {/* 文件图标 / 加载 spinner */}
             {isLoading ? (
               <svg
@@ -110,7 +114,7 @@ export function EditorTabs() {
 
             {!isLoading && item.modified && (
               <span
-                className="w-1.5 h-1.5 rounded-full bg-amber-400"
+                className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_4px] shadow-amber-400/60"
                 title="AI 已修改,预览已刷新"
               />
             )}
@@ -120,7 +124,7 @@ export function EditorTabs() {
                 e.stopPropagation();
                 closeTab(item.path);
               }}
-              className="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-neutral-600 text-neutral-500 hover:text-neutral-200 text-xs opacity-0 group-hover:opacity-100"
+              className="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-white/15 text-neutral-500 hover:text-neutral-100 text-xs opacity-0 group-hover:opacity-100"
               title={isLoading ? '取消加载并关闭' : '关闭'}
             >
               ✕

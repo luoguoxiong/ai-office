@@ -16,7 +16,9 @@ import { spawn, type ChildProcess, exec } from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { resolveOfficeCliBin } from './tools/officecli.js';
 
+const OFFICECLI_BIN = resolveOfficeCliBin();
 const execAsync = promisify(exec);
 const WATCH_MAX = 4; // 同时保留的最大 watch 进程数(超出按 LRU 关闭)
 const WATCH_START_TIMEOUT_MS = 15_000;
@@ -53,7 +55,7 @@ function killProcessTree(entry: { proc: ChildProcess; abs?: string }): void {
   // 1) 先尝试 officecli unwatch(优雅关闭,释放文件句柄)
   if (abs) {
     try {
-      spawn('officecli', ['unwatch', abs], { stdio: 'ignore' }).unref();
+      spawn(OFFICECLI_BIN, ['unwatch', abs], { stdio: 'ignore' }).unref();
     } catch {
       // ignore
     }
@@ -167,7 +169,7 @@ export async function ensureWatch(abs: string): Promise<number> {
   }
 
   const port = await findFreePort();
-  const proc = spawn('officecli', ['watch', abs, '--port', String(port)], {
+  const proc = spawn(OFFICECLI_BIN, ['watch', abs, '--port', String(port)], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const entry: WatchEntry = { port, proc, lastUsed: Date.now() };

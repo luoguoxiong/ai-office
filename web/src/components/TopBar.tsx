@@ -19,19 +19,40 @@ export function TopBar() {
   };
 
   return (
-    <div className="h-11 flex items-center px-3 gap-3 bg-neutral-800 border-b border-neutral-700 text-neutral-200 select-none">
+    <div className="h-11 flex items-center px-3 gap-3 bg-neutral-850/80 surface-gradient border-b border-white/5 text-neutral-200 select-none backdrop-blur-sm">
+      {/* 品牌区 */}
+      <div className="flex items-center gap-2 pr-2">
+        <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm shadow-blue-500/30">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+        </div>
+        <span className="text-sm font-semibold text-neutral-100 tracking-tight">AI Office</span>
+      </div>
+
+      <div className="w-px h-5 bg-white/10" />
+
       <button
         onClick={handleOpen}
         disabled={loading}
-        className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-sm font-medium transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium shadow-sm shadow-blue-600/20"
       >
-        📁 打开文件夹
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? 'animate-spin' : ''}>
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        {loading ? '加载中…' : '打开文件夹'}
       </button>
-      <span className="text-sm text-neutral-400 truncate">
-        {name ? name : '(未选择工作区)'}
-      </span>
-      <span className="ml-auto text-xs text-neutral-500">
-        AI Office
+
+      <span className="text-sm text-neutral-400 truncate flex items-center gap-1.5 min-w-0">
+        {name ? (
+          <>
+            <span className="text-neutral-600">/</span>
+            <span className="truncate text-neutral-300" title={name}>{name}</span>
+          </>
+        ) : (
+          <span className="text-neutral-500 italic">(未选择工作区)</span>
+        )}
       </span>
     </div>
   );

@@ -8,6 +8,7 @@ import { useState, useCallback, useRef, useEffect, type ReactNode } from 'react'
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useEditorStore } from '../../store/editorStore';
 import { api } from '../../api/client';
+import { Dropdown } from '../Dropdown';
 import type { TreeNode as TreeNodeType } from '../../types/api';
 import { fileIcon, fileColor } from './icons';
 
@@ -54,7 +55,7 @@ function DirActions({
           stop(e);
           onNewFile(dirPath);
         }}
-        className="w-6 h-6 flex items-center justify-center rounded hover:bg-neutral-600/80 transition-colors"
+        className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
         title="新建文件"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -69,7 +70,7 @@ function DirActions({
           stop(e);
           onNewFolder(dirPath);
         }}
-        className="w-6 h-6 flex items-center justify-center rounded hover:bg-neutral-600/80 transition-colors"
+        className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
         title="新增文件夹"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,7 +84,7 @@ function DirActions({
           stop(e);
           onRefresh();
         }}
-        className="w-6 h-6 flex items-center justify-center rounded hover:bg-neutral-600/80 transition-colors"
+        className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
         title="刷新"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -140,13 +141,13 @@ function TreeNode({
       >
         <div
           onClick={() => onToggle(node)}
-          className="w-full flex items-center gap-1 py-0.5 pr-2 text-left hover:bg-neutral-700/60 rounded text-sm cursor-pointer group"
+          className="w-full flex items-center gap-1 py-[3px] pr-2 text-left hover:bg-white/5 rounded text-sm cursor-pointer group"
           style={{ paddingLeft: pad }}
           title={node.path}
         >
-          <span className="text-[10px] w-3 text-neutral-500 shrink-0">{isExpanded ? '▼' : '▶'}</span>
-          <span className="shrink-0">{isExpanded ? '📂' : '📁'}</span>
-          <span className="text-neutral-200 truncate flex-1">{node.name}</span>
+          <span className="text-[10px] w-3 text-neutral-500 shrink-0 transition-transform duration-150 group-hover:text-neutral-300">{isExpanded ? '▼' : '▶'}</span>
+          <span className="shrink-0 text-[13px]">{isExpanded ? '📂' : '📁'}</span>
+          <span className="text-neutral-200 truncate flex-1 group-hover:text-neutral-100">{node.name}</span>
           <div className={isHovered ? '' : 'opacity-0'}>
             <DirActions
               dirPath={node.path}
@@ -178,8 +179,8 @@ function TreeNode({
           </div>
         )}
         {isExpanded && hasChildren && children && children.length === 0 && (
-          <div className="text-xs text-neutral-600 italic" style={{ paddingLeft: pad + 24 }}>
-            (空目录)
+          <div className="text-xs text-neutral-600 italic py-0.5" style={{ paddingLeft: pad + 24 }}>
+            空目录
           </div>
         )}
       </div>
@@ -191,14 +192,16 @@ function TreeNode({
   return (
     <button
       onClick={() => onOpenFile(node)}
-      className={`w-full flex items-center gap-1.5 py-0.5 pr-2 text-left rounded text-sm transition-colors ${
-        isActive ? 'bg-blue-600/30 text-blue-200' : 'hover:bg-neutral-700/60'
+      className={`w-full flex items-center gap-1.5 py-[3px] pr-2 text-left rounded text-sm ${
+        isActive
+          ? 'bg-blue-500/15 text-blue-200 border-l-2 border-l-blue-400'
+          : 'border-l-2 border-l-transparent hover:bg-white/5'
       }`}
-      style={{ paddingLeft: pad + 16 }}
+      style={{ paddingLeft: pad + 14 }}
       title={node.path}
     >
-      <span>{fileIcon(node.ext)}</span>
-      <span className={`truncate ${isActive ? '' : fileColor(node.ext)}`}>{node.name}</span>
+      <span className="text-[13px]">{fileIcon(node.ext)}</span>
+      <span className={`truncate ${isActive ? 'text-blue-100' : fileColor(node.ext)}`}>{node.name}</span>
     </button>
   );
 }
@@ -274,18 +277,15 @@ function NewFileModal({
         <div className="p-4 space-y-3">
           <div>
             <label className="block text-xs text-neutral-400 mb-1">文件类型</label>
-            <select
-              className="w-full bg-neutral-900 border border-neutral-600 rounded px-2 py-1.5 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={typeIdx}
-              onChange={(e) => setTypeIdx(Number(e.target.value))}
+            <Dropdown
+              value={String(typeIdx)}
+              onChange={(v) => setTypeIdx(Number(v))}
               disabled={submitting}
-            >
-              {FILE_TYPE_OPTIONS.map((o, i) => (
-                <option key={o.ext} value={i}>
-                  {o.icon} {o.label}
-                </option>
-              ))}
-            </select>
+              options={FILE_TYPE_OPTIONS.map((o, i) => ({
+                value: String(i),
+                label: `${o.icon} ${o.label}`,
+              }))}
+            />
           </div>
           <div>
             <label className="block text-xs text-neutral-400 mb-1">文件名(不含扩展名)</label>
@@ -519,15 +519,46 @@ export function FileTree() {
 
   let body: ReactNode;
   if (loading) {
-    body = <div className="text-neutral-500 text-sm p-2">加载中…</div>;
+    body = (
+      <div className="flex flex-col items-center justify-center gap-2 py-10 text-neutral-500 animate-fade-in">
+        <svg className="w-5 h-5 animate-spin text-blue-400" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+          <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
+        </svg>
+        <span className="text-xs">加载中…</span>
+      </div>
+    );
   } else if (error) {
-    body = <div className="text-red-400 text-sm p-2">⚠️ {error}</div>;
+    body = (
+      <div className="flex items-start gap-2 m-2 p-2 rounded bg-red-500/10 border border-red-500/30 text-red-300 text-xs animate-fade-in">
+        <span>⚠️</span>
+        <span className="break-words">{error}</span>
+      </div>
+    );
   } else if (loadError) {
-    body = <div className="text-red-400 text-sm p-2">⚠️ {loadError}</div>;
+    body = (
+      <div className="flex items-start gap-2 m-2 p-2 rounded bg-red-500/10 border border-red-500/30 text-red-300 text-xs animate-fade-in">
+        <span>⚠️</span>
+        <span className="break-words">{loadError}</span>
+      </div>
+    );
   } else if (!root) {
-    body = <div className="text-neutral-500 text-sm p-2">点击上方「打开文件夹」选择工作区</div>;
+    body = (
+      <div className="flex flex-col items-center gap-3 px-4 py-10 text-center animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center text-2xl">📁</div>
+        <div className="space-y-1">
+          <p className="text-sm text-neutral-300">尚未打开工作区</p>
+          <p className="text-xs text-neutral-500 leading-relaxed">点击顶部「打开文件夹」<br />选择一个目录开始</p>
+        </div>
+      </div>
+    );
   } else if (tree.length === 0) {
-    body = <div className="text-neutral-500 text-sm p-2">(空目录)</div>;
+    body = (
+      <div className="flex flex-col items-center gap-2 py-10 text-center text-neutral-500 animate-fade-in">
+        <span className="text-2xl opacity-50">📂</span>
+        <p className="text-xs">空目录</p>
+      </div>
+    );
   } else {
     body = tree.map((n) => (
       <TreeNode
@@ -549,14 +580,14 @@ export function FileTree() {
   }
 
   return (
-    <aside className="w-60 shrink-0 border-r border-neutral-700 bg-neutral-800 flex flex-col min-h-0">
+    <aside className="w-60 shrink-0 border-r border-white/5 bg-neutral-850/60 flex flex-col min-h-0">
       <div
-        className="px-3 py-1.5 text-xs font-medium text-neutral-400 uppercase tracking-wide border-b border-neutral-700/60 flex items-center justify-between"
+        className="px-3 h-8 flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider border-b border-white/5 surface-gradient"
         onMouseEnter={() => setHeaderHovered(true)}
         onMouseLeave={() => setHeaderHovered(false)}
       >
         <span>资源管理器</span>
-        <div className={headerHovered ? '' : 'opacity-0'}>
+        <div className={`transition-opacity duration-150 ${headerHovered ? 'opacity-100' : 'opacity-0'}`}>
           <DirActions
             dirPath=""
             onNewFile={(d) => setNewFileForDir(d)}

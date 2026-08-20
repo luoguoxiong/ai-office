@@ -73,6 +73,31 @@ const PREVIEW_IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.w
 const PREVIEW_OFFICE_EXTS = new Set(['.xlsx', '.docx', '.pptx']);
 const PREVIEW_MAX_CHARS = 300_000;
 
+// ─── officecli 预览反代(token → 文件路径,同源后可注入 CSS 隐藏滚动条)──
+const pathToToken = new Map<string, string>();
+const tokenToPath = new Map<string, string>();
+
+/** 获取或创建文件路径对应的预览 token(稳定,同一文件复用同一 token) */
+function getOrCreatePreviewToken(absPath: string): string {
+  let token = pathToToken.get(absPath);
+  if (!token) {
+    token = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    pathToToken.set(absPath, token);
+    tokenToPath.set(token, absPath);
+  }
+  return token;
+}
+
+/** 清空所有预览 token 映射(工作区切换 / 服务关闭时调用) */
+function clearPreviewTokens(): void {
+  pathToToken.clear();
+  tokenToPath.clear();
+}
+
+/** 注入到 officecli 预览 HTML 中隐藏滚动条的 CSS */
+const HIDE_SCROLLBAR_CSS =
+  '<style id="ai-office-hide-scrollbar">::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}*{scrollbar-width:none!important;-ms-overflow-style:none!important}</style>';
+
 async function main() {
   // ─── 启动前置清理(解决「关闭再打开卡住」核心问题) ──────────────
   // 1) 清掉上次异常退出残留的 officecli watch 进程(释放随机预览端口 + 文件句柄)
@@ -167,6 +192,7 @@ async function main() {
         ws = await createWorkspace(path.resolve(inputPath));
         cache.clear();
         stopAllWatch();
+        clearPreviewTokens();
         await saveWorkspaceState();
         const tree = await buildFileTree(ws.root, '', 1);
         return json(res, 200, { root: ws.root, name: path.basename(ws.root), tree });
@@ -337,6 +363,82 @@ async function main() {
         return handleChat(req, res, { getRuntime });
       }
 
+      // ── GET /api/v1/preview/<token>/* (officecli 预览反代,同源 → 注入 CSS 隐藏滚动条)
+      if (req.method === 'GET' && p.startsWith('/api/v1/preview/')) {
+        // 解析:/api/v1/preview/<token>/<sub-path>
+        const rest = p.slice('/api/v1/preview/'.length);
+        const slashIdx = rest.indexOf('/');
+        const token = slashIdx >= 0 ? rest.slice(0, slashIdx) : rest;
+        const subPath = slashIdx >= 0 ? rest.slice(slashIdx) : '/';
+
+        const absPath = tokenToPath.get(token);
+        if (!absPath) {
+          return json(res, 404, { error: '预览不存在或已过期' });
+        }
+
+        let port: number;
+        try {
+          port = await ensureWatch(absPath);
+        } catch {
+          return json(res, 502, { error: '预览服务不可用' });
+        }
+
+        // 转发请求到 officecli(不转发 accept-encoding → 获取未压缩 HTML 便于注入)
+        const proxyReq = http.request(
+          {
+            hostname: '127.0.0.1',
+            port,
+            path: subPath + url.search,
+            method: 'GET',
+            headers: {
+              Accept: req.headers.accept || '*/*',
+              'Accept-Language': req.headers['accept-language'] || '',
+              Host: `127.0.0.1:${port}`,
+            },
+          },
+          (proxyRes) => {
+            const contentType = (proxyRes.headers['content-type'] || '').toLowerCase();
+            const isHtml = contentType.includes('text/html');
+
+            if (isHtml) {
+              // 缓冲 HTML → 注入隐藏滚动条 CSS → 发送
+              const chunks: Buffer[] = [];
+              proxyRes.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+              proxyRes.on('end', () => {
+                let body = Buffer.concat(chunks).toString('utf-8');
+                if (body.includes('</head>')) {
+                  body = body.replace('</head>', `${HIDE_SCROLLBAR_CSS}\n</head>`);
+                } else if (body.includes('</body>')) {
+                  body = body.replace('</body>', `${HIDE_SCROLLBAR_CSS}\n</body>`);
+                } else {
+                  body = HIDE_SCROLLBAR_CSS + body;
+                }
+                const headers = { ...proxyRes.headers };
+                delete headers['content-length'];
+                delete headers['content-encoding'];
+                delete headers['transfer-encoding'];
+                headers['content-length'] = String(Buffer.byteLength(body, 'utf-8'));
+                res.writeHead(proxyRes.statusCode || 200, headers);
+                res.end(body);
+              });
+              proxyRes.on('error', () => {
+                if (!res.headersSent) json(res, 502, { error: '预览读取失败' });
+              });
+            } else {
+              // 非 HTML 资源(JS/CSS/图片/SSE)直接透传
+              res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+              proxyRes.pipe(res);
+            }
+          },
+        );
+
+        proxyReq.on('error', () => {
+          if (!res.headersSent) json(res, 502, { error: '预览服务连接失败' });
+        });
+        proxyReq.end();
+        return;
+      }
+
       // ── GET /api/live-reload (dev 模式前端自动刷新指纹) ────────
       if (req.method === 'GET' && p === '/api/live-reload') {
         if (!IS_DEV) return json(res, 404, { error: 'Not Found' });
@@ -395,6 +497,7 @@ async function main() {
       // ignore
     }
     stopAllWatch();
+    clearPreviewTokens();
     await Promise.allSettled([...cache.values()].map((rt) => rt.close().catch(() => {})));
     clearTimeout(forceTimer);
     process.exit(0);
@@ -537,14 +640,15 @@ async function handleFileOpen(
       });
     }
     try {
-      const port = await ensureWatch(abs);
+      await ensureWatch(abs);
+      const token = getOrCreatePreviewToken(abs);
       return json(res, 200, {
         kind: 'office',
         path: relPath,
         name,
         ext,
         size,
-        previewUrl: `http://127.0.0.1:${port}/`,
+        previewUrl: `/api/v1/preview/${token}/`,
       });
     } catch (e) {
       return json(res, 200, { kind: 'error', path: relPath, name, ext, size, message: `预览失败: ${(e as Error).message}` });

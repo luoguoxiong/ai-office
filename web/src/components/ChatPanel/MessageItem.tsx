@@ -26,16 +26,16 @@ function _MessageItem({ msg, streaming }: { msg: ChatMessage; streaming: boolean
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[92%] px-3 py-2 rounded-lg text-sm leading-relaxed whitespace-pre-wrap break-words ${
+      <div className={`max-w-[92%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
         isUser
-          ? 'bg-blue-600/80 text-white rounded-br-sm'
+          ? 'bg-blue-600 text-white rounded-br-md shadow-sm shadow-blue-600/20'
           : msg.error
-            ? 'bg-red-900/40 text-red-200 border border-red-700/50 rounded-bl-sm'
-            : 'bg-neutral-700/60 text-neutral-100 border border-neutral-600/50 rounded-bl-sm'
+            ? 'bg-red-500/10 text-red-200 border border-red-500/30 rounded-bl-md'
+            : 'bg-white/5 text-neutral-100 border border-white/10 rounded-bl-md'
       }`}>
         {/* 思考过程块(reasoning 模型,可选) */}
         {msg.thinking && (
-          <details className="mb-2 text-xs text-neutral-400 border-b border-neutral-600/50 pb-1.5">
+          <details className="mb-2 text-xs text-neutral-400 border-b border-white/10 pb-1.5">
             <summary className="cursor-pointer select-none hover:text-neutral-200">🤔 思考过程</summary>
             <div className="mt-1 italic">{msg.thinking}</div>
           </details>

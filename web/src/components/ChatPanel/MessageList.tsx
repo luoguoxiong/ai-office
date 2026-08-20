@@ -15,13 +15,17 @@ export function MessageList({ messages, streaming }: { messages: ChatMessage[]; 
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 gap-2 px-4 text-center">
-        <span className="text-3xl">🤖</span>
-        <p className="text-sm">AI 助手准备就绪</p>
-        <p className="text-xs text-neutral-600 leading-relaxed">
-          打开一个 Office 文件后,AI 会自动感知。<br />
-          可以问「读取一下这个文件的结构」或「把第一列改成蓝色」。
-        </p>
+      <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 gap-3 px-6 text-center animate-fade-in">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 flex items-center justify-center text-2xl">
+          🤖
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm text-neutral-300 font-medium">AI 助手准备就绪</p>
+          <p className="text-xs text-neutral-500 leading-relaxed max-w-[260px]">
+            打开一个 Office 文件后,AI 会自动感知。<br />
+            试试问「读取一下这个文件的结构」<br />或「把第一列改成蓝色」
+          </p>
+        </div>
       </div>
     );
   }

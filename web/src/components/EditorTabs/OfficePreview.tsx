@@ -62,10 +62,17 @@ export function OfficePreview() {
 
   if (!activeTab) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-neutral-600 bg-neutral-900 gap-2">
-        <span className="text-4xl">📊</span>
-        <p className="text-sm">从左侧文件树选择一个文件打开预览</p>
-        <p className="text-xs text-neutral-700">支持 xlsx / docx / pptx 及文本/图片/PDF</p>
+      <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 bg-neutral-900 gap-3 p-6 animate-fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neutral-700/60 to-neutral-800/60 flex items-center justify-center text-3xl shadow-inner">
+          📊
+        </div>
+        <div className="text-center space-y-1.5">
+          <p className="text-sm text-neutral-300 font-medium">尚未打开任何文件</p>
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            从左侧文件树选择一个文件打开预览<br />
+            <span className="text-neutral-600">支持 xlsx / docx / pptx 及文本 / 图片 / PDF</span>
+          </p>
+        </div>
       </div>
     );
   }
@@ -74,6 +81,7 @@ export function OfficePreview() {
   const reloadKey = activeTab.modifiedAt ?? 0;
 
   if (activeTab.kind === 'office' && activeTab.previewUrl) {
+    // previewUrl 走后端反代(同源),HTML 已注入 CSS 隐藏滚动条
     return (
       <div className="flex-1 min-h-0 bg-neutral-900">
         <iframe
@@ -120,12 +128,17 @@ export function OfficePreview() {
 
   // error / unsupported / message
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 bg-neutral-900 gap-2">
-      <span className="text-4xl">{fileIcon(activeTab.ext)}</span>
-      <p className="text-sm">{activeTab.message ?? `无法预览此文件类型 (${activeTab.ext || '未知'})`}</p>
+    <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 bg-neutral-900 gap-3 p-6 animate-fade-in">
+      <div className="w-14 h-14 rounded-2xl bg-neutral-800/60 flex items-center justify-center text-2xl">
+        {fileIcon(activeTab.ext)}
+      </div>
+      <p className="text-sm text-neutral-300 text-center max-w-sm">
+        {activeTab.message ?? `无法预览此文件类型 (${activeTab.ext || '未知'})`}
+      </p>
       {activeTab.kind === 'error' && (
-        <p className="text-xs text-amber-500 max-w-md text-center">
-          如需预览 Office 文档,请确保已安装 officecli: <code className="text-blue-400">npm i -g @officecli/officecli</code>
+        <p className="text-xs text-amber-400/90 max-w-md text-center leading-relaxed bg-amber-500/5 border border-amber-500/20 rounded-md px-3 py-2">
+          如需预览 Office 文档,请确保已安装 officecli:<br />
+          <code className="text-blue-300 font-mono">npm i -g @officecli/officecli</code>
         </p>
       )}
     </div>

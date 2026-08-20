@@ -18,7 +18,8 @@
     "tauri:build": "pnpm build && tauri build"
   },
   "dependencies": {
-    "@aipack-ai/agent": "^0.0.2"
+    "@aipack-ai/agent": "^0.0.2",
+    "@officecli/officecli": "^1.0.144"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
@@ -29,5 +30,11 @@
   },
   "engines": {
     "node": ">=18.19.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@officecli/officecli",
+      "esbuild"
+    ]
   }
 }

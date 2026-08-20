@@ -61,3 +61,82 @@ body {
     scrollbar-width: none;
   }
 }
+
+/* ================================================
+   UX 精致度增强（焦点环 / 选区 / 过渡 / 渐变工具）
+   ================================================ */
+
+/* 文本选区：使用品牌蓝调，避免默认的深蓝压字 */
+::selection {
+  background-color: rgb(59 130 246 / 0.30);
+  color: rgb(255 255 255);
+}
+
+/* 键盘焦点环：统一可见但不刺眼，鼠标操作时不显示 */
+:focus-visible {
+  outline: 2px solid rgb(59 130 246 / 0.6);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline-offset: 2px;
+}
+
+/* 全局基础过渡：让所有可交互元素状态切换更平滑 */
+button,
+a,
+select,
+input,
+textarea,
+[role='button'] {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease;
+}
+
+/* 按钮按下反馈（轻微下沉，增强物理感） */
+button:active:not(:disabled),
+[role='button']:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+/* 微妙的顶部高光渐变，给暗色面板增加层次 */
+.surface-gradient {
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.025) 0%,
+    transparent 60%
+  );
+}
+
+/* 入场动画工具类（用于空状态、modal） */
+@keyframes ux-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: ux-fade-in 0.2s ease-out;
+}
+
+/* 尊重用户的动画减弱偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

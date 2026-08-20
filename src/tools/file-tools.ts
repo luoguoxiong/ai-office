@@ -1,13 +1,13 @@
 /**
  * 工作区文件级工具:
- *   - file_tree   查:递归目录树(供 Agent 感知 VSCode 风格目录结构)
- *   - file_delete 删:移入 .trash 回收站(带时间戳,可恢复)
+ *   - file_tree 查:递归目录树(供 Agent 感知 VSCode 风格目录结构)
+ *
+ * 注:出于安全设计,Agent 仅可修改「当前选中文件」的内容,不支持新增/删除文件,
+ * 因此不再提供 file_delete 工具。
  */
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { createTextContent, type Tool } from '@aipack-ai/agent';
 import type { Workspace } from '../workspace.js';
-import { resolveInWorkspace, assertExists } from '../workspace.js';
+import { resolveInWorkspace } from '../workspace.js';
 import { buildFileTree, treeToText } from '../file-tree.js';
 
 // ─── 查:file_tree ─────────────────────────────────────────────────
@@ -53,48 +53,9 @@ export function createFileTreeTool(ws: Workspace): Tool {
   };
 }
 
-// ─── 删:file_delete(移入回收站)───────────────────────────────────
-
-export function createFileDeleteTool(ws: Workspace): Tool {
-  return {
-    name: 'file_delete',
-    description:
-      '删除工作区文件:文件会被移入 .trash 回收站(带时间戳),而不是物理删除。' +
-      '删除前请先向用户确认文件路径与意图。',
-    parameters: {
-      type: 'object',
-      properties: {
-        filePath: { type: 'string', description: '要删除的文件路径(相对工作区)' },
-      },
-      required: ['filePath'],
-    },
-    permissions: ['fs:write'],
-    async execute(_toolCallId, args) {
-      const { filePath } = (args ?? {}) as { filePath?: string };
-      try {
-        if (!filePath) throw new Error('缺少 filePath 参数');
-        const abs = resolveInWorkspace(ws.root, filePath);
-        await assertExists(abs);
-        if (filePath.startsWith('.trash')) throw new Error('不能删除回收站内的文件');
-
-        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const trashPath = path.join(ws.root, '.trash', `${path.basename(abs)}.${stamp}`);
-        await fs.rename(abs, trashPath);
-        return {
-          content: [createTextContent(`已删除 ${filePath}(移入回收站 .trash/)`)],
-          details: { filePath, action: 'delete', trashPath: path.relative(ws.root, trashPath) },
-        };
-      } catch (err) {
-        return {
-          content: [createTextContent(`[file_delete] ${(err as Error).message}`)],
-          details: { error: (err as Error).message },
-        };
-      }
-    },
-  };
-}
+// ─── 删:file_delete 已移除(Agent 不支持删除文件) ──────────────────
 
 /** 汇总导出文件工具集 */
 export function createFileTools(ws: Workspace): Tool[] {
-  return [createFileTreeTool(ws), createFileDeleteTool(ws)];
+  return [createFileTreeTool(ws)];
 }

@@ -9,7 +9,6 @@ function toolLabel(name: string): string {
     office_help: '查询命令',
     office_exec: '修改 Office',
     file_tree: '浏览目录',
-    file_delete: '删除文件',
   };
   return map[name] ?? name;
 }

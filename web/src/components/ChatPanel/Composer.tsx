@@ -75,18 +75,21 @@ export function Composer({
       {/* 上下文提示:当前选中的 office 文件 */}
       {activeFilePath ? (
         <div className="text-[11px] flex items-center gap-1.5 px-1 text-neutral-400">
-          <span className="text-neutral-500">📌 上下文</span>
+          <span className="text-neutral-500">📌 可修改</span>
           <span className="inline-flex items-center gap-1 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 max-w-full">
             <span>{fileIcon(activeFileExt)}</span>
-            <span className="truncate max-w-[200px] text-neutral-300" title={activeFilePath}>
+            <span className="truncate max-w-[180px] text-neutral-300" title={activeFilePath}>
               {activeFileName ?? activeFilePath}
             </span>
+          </span>
+          <span className="text-neutral-600 shrink-0" title="助手仅可修改当前选中文件的内容,不支持新增/删除文件">
+            仅此文件
           </span>
         </div>
       ) : (
         <div className="text-[11px] px-1 text-neutral-600 flex items-center gap-1">
           <span>💡</span>
-          <span>打开一个 Office 文件,助手会自动把它作为上下文</span>
+          <span>打开一个 Office 文件,助手仅可修改当前选中文件的内容(不支持新增/删除文件)</span>
         </div>
       )}
 

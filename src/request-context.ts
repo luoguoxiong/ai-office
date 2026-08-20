@@ -12,6 +12,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export interface RequestContext {
   /** office_exec 成功修改文件时回调(参数=相对工作区路径) */
   onFileModified?: (filePath: string) => void;
+  /** 当前请求绑定的「选中文件」(相对工作区路径)。
+   *  写工具据此限制:只能修改该文件,禁止新增/删除其他文件。 */
+  currentFilePath?: string;
 }
 
 export const requestCtx = new AsyncLocalStorage<RequestContext>();

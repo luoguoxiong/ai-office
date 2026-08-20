@@ -163,7 +163,7 @@ async function main() {
           models: config.models,
           workspace: path.basename(ws.root),
           workspaceRoot: ws.root,
-          tools: ['office_read', 'office_help', 'office_exec', 'file_tree', 'file_delete'],
+          tools: ['office_read', 'office_help', 'office_exec', 'file_tree'],
         });
       }
 

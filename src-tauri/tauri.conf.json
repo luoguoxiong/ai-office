@@ -5,7 +5,7 @@
   "identifier": "com.aipack.aioffice",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "pnpm build && pnpm stage:resources",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist-web"
   },
@@ -20,6 +20,7 @@
     "active": true,
     "targets": "all",
     "category": "Productivity",
-    "icon": ["icons/icon.png"]
+    "icon": ["icons/icon.png"],
+    "resources": ["resources"]
   }
 }

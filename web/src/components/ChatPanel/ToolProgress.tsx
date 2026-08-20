@@ -9,7 +9,6 @@ function toolLabel(name: string): string {
     office_help: '查询命令',
     office_exec: '修改 Office',
     file_tree: '浏览目录',
-    file_delete: '删除文件',
   };
   return map[name] ?? name;
 }
@@ -27,9 +26,9 @@ export function ToolProgress({ events }: { events: ToolEvent[] }) {
         return (
           <span
             key={i}
-            className={`text-[11px] px-1.5 py-0.5 rounded border font-mono ${
+            className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border font-mono ${
               running
-                ? 'bg-blue-500/15 text-blue-300 border-blue-500/40 animate-pulse'
+                ? 'bg-blue-500/15 text-blue-300 border-blue-500/40'
                 : bad
                   ? 'bg-red-500/15 text-red-300 border-red-500/40'
                   : ok
@@ -37,7 +36,20 @@ export function ToolProgress({ events }: { events: ToolEvent[] }) {
                     : 'bg-neutral-700/50 text-neutral-300 border-neutral-600'
             }`}
           >
-            {running ? '⏳ ' : bad ? '❌ ' : ok ? '✅ ' : ''}
+            {running ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="animate-spin">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : bad ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : ok ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : null}
             {toolLabel(ev.toolName)}
           </span>
         );

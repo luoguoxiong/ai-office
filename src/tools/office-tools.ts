@@ -137,8 +137,8 @@ commands 命令结构:
 常用元素:sheet/cell/row/chart/table/picture/paragraph/markdown/style/shape/autofilter/sort 等。
 
 用法要点:
-1. 不确定某元素的路径、可用属性名或属性值时,先调用 office_help 查询准确语法(如 office_help format='xlsx' topic='autofilter'),再生成 commands。不要凭记忆编造属性名——查到的才是权威。
-2. 新建文件:create=true(或文件不存在时自动创建空文档);pptx 先 add slide 再向 slide 里 add 元素。
+1. 不确定某元素的路径、可用属性名或属性值时,先调用 office_help 查询准确语法(如 office_help format='xlsx' topic='autofilter'),再生成 commands。不要凭记忆编造属性名--查到的才是权威。
+2. filePath 必须是当前选中文件;create=true 会清空当前选中文件后重建(覆盖前自动备份 .bak),仅用于全量重写当前文件,不能用来新建其他文件。pptx 先 add slide 再向 slide 里 add 元素。
 3. 修改现有文件:先 office_read 读原文确定路径(set/remove 用 path,add 用 parent),再 set/remove/add。
 4. Word 标题若未定义样式,先 add style(Heading1-6, basedOn 'Normal', bold, 深色)再 add paragraph style='Heading1'。
 5. 覆盖写前工具自动备份 .bak。
@@ -156,11 +156,11 @@ export function createOfficeExecTool(ws: Workspace): Tool {
       properties: {
         filePath: {
           type: 'string',
-          description: '目标文件(相对工作区,如 "定制.pptx")。已存在则在其上追加/修改;不存在会自动创建空文档',
+          description: '目标文件(相对工作区,如 "定制.pptx")。必须是当前选中的文件;传其他路径会被拒绝',
         },
         create: {
           type: 'boolean',
-          description: '强制重新创建空文档(会丢弃原内容,覆盖前自动备份 .bak,谨慎使用)',
+          description: '强制清空当前选中文件后重建(会丢弃原内容,覆盖前自动备份 .bak,谨慎使用);仅用于全量重写当前文件,不能新建其他文件',
         },
         commands: {
           type: 'array',
@@ -195,6 +195,34 @@ export function createOfficeExecTool(ws: Workspace): Tool {
         }
         const abs = resolveInWorkspace(ws.root, filePath);
 
+        // ── 安全边界:只能修改当前选中文件(禁止新增/修改其他文件) ──
+        const currentFilePath = requestCtx.getStore()?.currentFilePath;
+        if (!currentFilePath) {
+          return {
+            content: [
+              createTextContent(
+                '⚠️ 当前未选中任何文件,无法执行修改。\n' +
+                '我只能修改当前选中的那一个文件的内容,不支持新增或删除文件。\n' +
+                '请先在左侧文件树中打开一个 Office 文件,再告诉我需要修改什么。',
+              ),
+            ],
+            details: { error: 'no-active-file' },
+          };
+        }
+        const currentAbs = resolveInWorkspace(ws.root, currentFilePath);
+        if (abs !== currentAbs) {
+          return {
+            content: [
+              createTextContent(
+                `⚠️ 出于安全限制,我只能修改当前选中的文件「${currentFilePath}」的内容,不能新增文件或修改其他文件。\n` +
+                `本次操作的目标是「${filePath}」,与当前选中文件不一致,已拒绝执行。\n` +
+                `如需修改其他文件,请先在左侧文件树中切换到目标文件,再来告诉我。`,
+              ),
+            ],
+            details: { error: 'not-current-file', current: currentFilePath, requested: filePath },
+          };
+        }
+
         // 校验 props 中的文件路径键:拒绝工作区外路径
         for (const c of commands) {
           for (const key of PATH_PROPS) {
@@ -226,10 +254,12 @@ export function createOfficeExecTool(ws: Workspace): Tool {
             `[office_exec] 执行 ${filePath}${willCreate ? '(新建)' : ''} commands=${commands.length}`,
           );
           const t0 = Date.now();
+          let execOk = false;
           try {
             const summary = await officeExecuteScript(abs, commands, { create: willCreate });
             const dur = ((Date.now() - t0) / 1000).toFixed(1);
             console.log(`[office_exec] ✓ 完成 ${filePath} ${dur}s`);
+            execOk = true;
             return {
               content: [
                 createTextContent(
@@ -243,14 +273,14 @@ export function createOfficeExecTool(ws: Workspace): Tool {
             console.error(`[office_exec] ✗ 失败 ${filePath} ${dur}s:`, (e as Error).message);
             throw e;
           } finally {
-            // 写后尝试重启预览(如文件曾被预览),让用户立刻看到最新内容
-            ensureWatch(abs).catch(() => {});
+            // 写后重启预览(等待就绪),确保前端重载时预览已可用,避免 iframe 黑屏
+            await ensureWatch(abs).catch(() => {});
+            // 仅在执行成功且预览就绪后通知前端刷新(失败则不触发,避免黑屏)
+            if (execOk) {
+              requestCtx.getStore()?.onFileModified?.(filePath);
+            }
           }
         });
-
-        // 成功执行后,通知当前请求(推送 SSE file 事件 → 前端刷新预览)
-        // requestCtx 可能为空(非 SSE 调用),此时安全跳过
-        requestCtx.getStore()?.onFileModified?.(filePath);
 
         return result;
       } catch (err) {

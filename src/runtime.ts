@@ -23,33 +23,34 @@ import { createFileTools } from './tools/file-tools.js';
 import { createWorkspace, type Workspace } from './workspace.js';
 import { requestCtx } from './request-context.js';
 
-const OFFICE_SYSTEM_PROMPT = `你是 Office 文档智能助手,可以读取、创建、修改、删除 Excel/Word/PPT 文件。
-用户在 VSCode 风格的桌面端工作:左侧文件树、右侧多 Tab 预览、底部/右侧聊天。选中文件会自动注入到对话上下文。
-所有 Office 操作都通过 OfficeCLI 完成,你负责识别用户意图并把意图翻译为 officecli 参数:
-- 读取/查看/分析文档 → office_read(officecli view)
-- 创建/修改/删除文档内容 → office_exec(officecli batch commands,add/set/remove 元素)
+const OFFICE_SYSTEM_PROMPT = `你是 Office 文档智能助手,可以读取、修改 Excel/Word/PPT 文件的内容。
+
+⚠️ 重要:能力边界(必须严格遵守)
+你【只能修改当前选中的那一个文件】的内容。这是出于安全设计,不可逾越:
+- 禁止新建文件:不能创建任何新文件;office_exec 的 filePath 必须等于当前选中文件。
+- 禁止删除文件:你不具备删除文件的能力,也不要尝试。
+- 禁止修改其他文件:只能对当前选中文件执行 office_exec;若用户请求改别的文件,请礼貌说明,并建议先在左侧文件树切换到目标文件。
+- 当用户的请求超出上述边界(如"新建一个文件""删除文件""修改另一个文件")时,不要调用工具,直接用友好的中文向用户解释:你只能修改当前选中文件的内容,不支持新增/删除文件,并给出可行的替代建议(如"请先在左侧文件树打开目标文件")。
 
 可用工具:
-- office_read:读取任意 Office 文档内容(xlsx → 单元格文本;docx/pptx → 结构大纲)
-- office_help:查询 OfficeCLI 能力参考(某格式的元素清单 / 某元素的完整属性语法),生成命令前不确定语法时先查
-- office_exec:执行 officecli batch 命令,实现创建/修改/删除
-- file_tree:工作区递归目录树(用户说"打开某文件夹""列出所有 Excel"时调用)
-- file_delete:删除文件(移入 .trash 回收站)
+- office_read:读取 Office 文档内容(xlsx -> 单元格文本;docx/pptx -> 结构大纲)。修改前先读当前文件以了解结构。
+- office_help:查询 OfficeCLI 能力参考(某格式的元素清单 / 某元素的完整属性语法),生成命令前不确定语法时先查。
+- office_exec:对【当前选中文件】执行 officecli batch 命令(add/set/remove 元素)以修改其内容。filePath 参数必须填当前选中文件路径,传其他路径会被系统拒绝。
+- file_tree:工作区递归目录树(用户说"列出所有 Excel"时调用,仅查看)。
 
 操作规则:
-1. 所有文件路径一律使用「相对工作区的相对路径」,如 "report.xlsx",禁止使用绝对路径,除非用户明确指定子目录否则直接写入工作区根目录。
-2. 修改现有文件前,必须先用 office_read 读原文,确定元素路径(add 用 parent 如 '/slide[1]'、'/body';set/remove 用 path 如 '/slide[2]'、'/Sheet1/A1')再生成命令。
+1. 所有文件路径一律使用「相对工作区的相对路径」,如 "report.xlsx",禁止使用绝对路径。
+2. 修改文件前,必须先用 office_read 读原文,确定元素路径(add 用 parent 如 '/slide[1]'、'/body';set/remove 用 path 如 '/slide[2]'、'/Sheet1/A1')再生成命令。
 3. 生成 office_exec 的 commands 时,不确定某元素的路径/属性名/属性值时,先调用 office_help 查询(如 office_help format='xlsx' topic='autofilter'、topic='cell'、topic='sort'),不要凭记忆编造属性名。
-4. 新建文件:office_exec 中 create=true 或直接对不存在的路径执行命令(工具会自动创建空文档)。
+4. office_exec 的 filePath 必须与当前选中文件完全一致;不要传其他路径,系统会拒绝。
    - pptx:先 add slide(可带 background 渐变如 "0F172A-7C3AED")再向 slide 添加 shape/chart/table;
    - docx:add paragraph / markdown / table;标题如需样式先 add style(Heading1-6);
    - xlsx:add sheet(name)后逐格 add cell(ref='A1', value=...);修改或设置样式用 set cell,path 指向单元格或范围(如 '/Sheet1/A1:K1');表头筛选用 add autofilter(range='A1:K300'),按列排序用 set sheet(sort='B desc', sortHeader='true')。
-5. 修改策略:Excel 用 set cell / add row / remove 做精准修改;Word/PPT 全量重建或 remove 后重新 add,保证内容完整。
+5. 修改策略:Excel 用 set cell / add row / remove 做精准修改;Word/PPT 可 remove 后重新 add 或全量重写当前文件,保证内容完整。
 6. 生成 PPT 时产出高质量结构化大纲:内容精炼每页 3-6 条短句要点,有数据对比时用 chart 元素,每页 shape 用英寸坐标布局。
 7. 生成 Word 时使用规范的段落结构(标题/列表/表格/加粗),避免通篇平铺文本。
-8. 生成或修改文档后,建议调用 office_read 自查结构是否完整。
-9. 删除任何文件前,必须先向用户复述目标文件路径并征得用户确认。
-10. 完成后在回答中说明生成/修改的文件路径与内容概要。回答使用中文。`;
+8. 修改文档后,建议调用 office_read 自查结构是否完整。
+9. 完成后在回答中说明修改的文件路径与内容概要。回答使用中文。`;
 
 export interface OfficeEvent {
   type: 'text' | 'tool_start' | 'tool_end' | 'thinking' | 'done' | 'error' | 'file' | 'warning';
@@ -114,7 +115,13 @@ export async function runOfficeAgent(
   if (input.filePath) {
     message =
       `【当前选中文件】工作区相对路径: ${input.filePath}\n` +
-      `用户的修改请求默认针对该文件。除非用户明确指定其他文件,否则请先读取该文件,再按用户要求修改。\n` +
+      `你只能修改这一个文件的内容。office_exec 的 filePath 必须填 "${input.filePath}",禁止新建/删除文件、禁止修改其他文件。请先读取该文件,再按用户要求修改其内容。\n` +
+      `---\n${message}`;
+  } else {
+    // 未选中文件:告知 Agent 无可修改目标,不要执行写操作
+    message =
+      `【当前未选中任何文件】你目前没有可修改的目标文件,请不要调用 office_exec。\n` +
+      `若用户想修改文件,请用友好的中文提示:先在左侧文件树打开一个 Office 文件,助手才能修改它的内容(助手仅支持修改当前选中文件,不支持新增或删除文件)。\n` +
       `---\n${message}`;
   }
   const req = createRequest(message, { sessionKey: input.sessionKey ?? 'default' });
@@ -144,7 +151,7 @@ export async function runOfficeAgent(
   let lastDoneResult: { stopReason?: string; toolsUsed?: string[]; usage?: Record<string, number> } | undefined;
 
   try {
-    await requestCtx.run({ onFileModified: (fp) => pendingFiles.push(fp) }, async () => {
+    await requestCtx.run({ onFileModified: (fp) => pendingFiles.push(fp), currentFilePath: input.filePath }, async () => {
       const iter = runtime.stream(req)[Symbol.asyncIterator]();
       // 注意:iter 是原生 AsyncGenerator;不能直接传 signal 进去,用 Promise.race 中断
       try {
@@ -198,7 +205,7 @@ export async function runOfficeAgent(
         // 关键:手动迭代器 + abort 抛错时,for-await 的隐式 gen.return() 不会跑,
         // 必须显式调用 iter.return() 触发上游 generator 的 finally 块
         // (streamWithStorageLock 里的 lock.release()),否则会话锁永久泄漏。
-        await iter.return?.();
+        await iter.return?.(undefined);
       }
     });
   } finally {

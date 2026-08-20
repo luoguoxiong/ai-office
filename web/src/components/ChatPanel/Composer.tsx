@@ -67,7 +67,11 @@ export function Composer({
       {/* 错误提示条 */}
       {error && (
         <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-md px-2.5 py-1.5 flex items-start gap-1.5 animate-fade-in">
-          <span className="shrink-0">⚠️</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
           <span className="break-words">{error}</span>
         </div>
       )}
@@ -75,18 +79,27 @@ export function Composer({
       {/* 上下文提示:当前选中的 office 文件 */}
       {activeFilePath ? (
         <div className="text-[11px] flex items-center gap-1.5 px-1 text-neutral-400">
-          <span className="text-neutral-500">📌 上下文</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-neutral-500">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span className="text-neutral-500">可修改</span>
           <span className="inline-flex items-center gap-1 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 max-w-full">
             <span>{fileIcon(activeFileExt)}</span>
-            <span className="truncate max-w-[200px] text-neutral-300" title={activeFilePath}>
+            <span className="truncate max-w-[180px] text-neutral-300" title={activeFilePath}>
               {activeFileName ?? activeFilePath}
             </span>
           </span>
+          <span className="text-neutral-600 shrink-0" title="助手仅可修改当前选中文件的内容,不支持新增/删除文件">
+            仅此文件
+          </span>
         </div>
       ) : (
-        <div className="text-[11px] px-1 text-neutral-600 flex items-center gap-1">
-          <span>💡</span>
-          <span>打开一个 Office 文件,助手会自动把它作为上下文</span>
+        <div className="text-[11px] px-1 text-neutral-600 flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-neutral-500">
+            <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .8 1.6V17h6.4v-.7c0-.6.3-1.2.8-1.6A7 7 0 0 0 12 2z" />
+          </svg>
+          <span>打开一个 Office 文件,助手仅可修改当前选中文件的内容(不支持新增/删除文件)</span>
         </div>
       )}
 

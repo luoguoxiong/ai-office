@@ -32,6 +32,8 @@ interface WatchEntry {
 }
 
 const watchCache = new Map<string, WatchEntry>();
+/** 正在启动中的 watch 进程(abs → Promise<port>),避免同一文件并发启动多个 watch */
+const pendingWatch = new Map<string, Promise<number>>();
 
 /** 找本机一个空闲端口 */
 function findFreePort(): Promise<number> {
@@ -159,52 +161,66 @@ export async function ensureWatch(abs: string): Promise<number> {
     return cached.port;
   }
 
-  // LRU:超过上限时关闭最久未用的
-  if (watchCache.size >= WATCH_MAX) {
-    let oldest: [string, WatchEntry] | null = null;
-    for (const [k, v] of watchCache) {
-      if (!oldest || v.lastUsed < oldest[1].lastUsed) oldest = [k, v];
-    }
-    if (oldest) stopWatch(oldest[0]);
-  }
+  // 复用正在启动中的 Promise,避免同一文件并发启动多个 watch 进程
+  // (场景:office_exec 写后异步 ensureWatch,同时 SSE file 事件触发前端重载
+  //  → 反代再次 ensureWatch;两次调用应共享同一个启动过程)
+  const pending = pendingWatch.get(abs);
+  if (pending) return pending;
 
-  const port = await findFreePort();
-  const proc = spawn(OFFICECLI_BIN, ['watch', abs, '--port', String(port)], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const entry: WatchEntry = { port, proc, lastUsed: Date.now() };
-  watchCache.set(abs, entry);
-
-  proc.stderr.on('data', (d) => {
-    const s = String(d).trim();
-    if (s) console.error(`[watch:${path.basename(abs)}] ${s}`);
-  });
-  proc.on('exit', () => {
-    if (watchCache.get(abs) === entry) watchCache.delete(abs);
-  });
-
-  // 等待 stdout 输出 "Watch: http://localhost:<port>" 确认就绪
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      stopWatch(abs);
-      reject(new Error('officecli watch 启动超时'));
-    }, WATCH_START_TIMEOUT_MS);
-    const onData = (d: Buffer) => {
-      const s = String(d);
-      if (s.includes(`http://localhost:${port}`) || s.includes(`http://127.0.0.1:${port}`)) {
-        clearTimeout(timer);
-        proc.stdout?.off('data', onData);
-        resolve();
+  const p = (async () => {
+    try {
+      // LRU:超过上限时关闭最久未用的
+      if (watchCache.size >= WATCH_MAX) {
+        let oldest: [string, WatchEntry] | null = null;
+        for (const [k, v] of watchCache) {
+          if (!oldest || v.lastUsed < oldest[1].lastUsed) oldest = [k, v];
+        }
+        if (oldest) stopWatch(oldest[0]);
       }
-    };
-    proc.stdout?.on('data', onData);
-    proc.once('exit', (code) => {
-      clearTimeout(timer);
-      reject(new Error(`officecli watch 意外退出,code=${code}`));
-    });
-  });
 
-  return port;
+      const port = await findFreePort();
+      const proc = spawn(OFFICECLI_BIN, ['watch', abs, '--port', String(port)], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      const entry: WatchEntry = { port, proc, lastUsed: Date.now() };
+      watchCache.set(abs, entry);
+
+      proc.stderr.on('data', (d) => {
+        const s = String(d).trim();
+        if (s) console.error(`[watch:${path.basename(abs)}] ${s}`);
+      });
+      proc.on('exit', () => {
+        if (watchCache.get(abs) === entry) watchCache.delete(abs);
+      });
+
+      // 等待 stdout 输出 "Watch: http://localhost:<port>" 确认就绪
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          stopWatch(abs);
+          reject(new Error('officecli watch 启动超时'));
+        }, WATCH_START_TIMEOUT_MS);
+        const onData = (d: Buffer) => {
+          const s = String(d);
+          if (s.includes(`http://localhost:${port}`) || s.includes(`http://127.0.0.1:${port}`)) {
+            clearTimeout(timer);
+            proc.stdout?.off('data', onData);
+            resolve();
+          }
+        };
+        proc.stdout?.on('data', onData);
+        proc.once('exit', (code) => {
+          clearTimeout(timer);
+          reject(new Error(`officecli watch 意外退出,code=${code}`));
+        });
+      });
+
+      return port;
+    } finally {
+      pendingWatch.delete(abs);
+    }
+  })();
+  pendingWatch.set(abs, p);
+  return p;
 }
 
 /** 停止单个文件的 watch 进程 */

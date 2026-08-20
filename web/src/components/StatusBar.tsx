@@ -1,23 +1,15 @@
-/** 底部状态栏:工作区 / 模型 / LLM / officecli 状态
+/** 底部状态栏:工作区 / 模型 / LLM 状态
  *  LLM 就绪状态不再依赖后端 llmReady(后端不读 env Key),而是按前端是否已填 Key + 已选模型判断
  */
-import { useEffect, useState } from 'react';
-import { api } from '../api/client';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { useSettingsStore } from '../store/settingsStore';
-import type { ConfigResponse } from '../types/api';
 
 export function StatusBar() {
-  const [config, setConfig] = useState<ConfigResponse | null>(null);
   const name = useWorkspaceStore((s) => s.name);
   const activeModel = useSettingsStore((s) => {
     const m = s.models.find((x) => x.id === s.activeModelId);
     return m ?? null;
   });
-
-  useEffect(() => {
-    api.config().then(setConfig).catch(() => {});
-  }, [name]);
 
   // 前端侧的 LLM 就绪标志:已选 active 模型 + 该模型已填非空 Key
   const llmReadyLocal = !!activeModel?.provider && !!activeModel?.modelId && !!activeModel?.apiKey?.trim();
@@ -52,13 +44,6 @@ export function StatusBar() {
       <span className={`flex items-center gap-1.5 ${llmReadyLocal ? 'text-green-400' : 'text-amber-400'}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${llmReadyLocal ? 'bg-green-400' : 'bg-amber-400'} ${llmReadyLocal ? '' : 'animate-pulse'}`} />
         <span>LLM {llmReadyLocal ? '就绪' : '未就绪'}</span>
-      </span>
-
-      <span className="w-px h-3 bg-white/10" />
-
-      <span className={`flex items-center gap-1.5 ${config?.officecliReady ? 'text-green-400' : 'text-amber-400'}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${config?.officecliReady ? 'bg-green-400' : 'bg-amber-400'}`} />
-        <span>officecli {config?.officecliReady ? '已安装' : '未安装'}</span>
       </span>
     </div>
   );

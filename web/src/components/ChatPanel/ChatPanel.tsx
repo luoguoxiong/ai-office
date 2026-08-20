@@ -64,10 +64,13 @@ export function ChatPanel() {
         <button
           onClick={clear}
           disabled={streaming}
-          className="text-xs px-1.5 py-1 rounded-md hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-neutral-400 hover:text-neutral-200"
+          className="inline-flex items-center justify-center text-xs w-7 h-7 rounded-md hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-neutral-400 hover:text-neutral-200"
           title="清空对话"
         >
-          🗑️
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
         </button>
       </div>
 
@@ -79,12 +82,19 @@ export function ChatPanel() {
         >
           {currentSessionKey === GLOBAL_SESSION_KEY ? (
             <>
-              <span className="text-neutral-500">🌐</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-500 shrink-0">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
               <span className="text-neutral-500">通用会话</span>
             </>
           ) : (
             <>
-              <span className="text-blue-400">📄</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400 shrink-0">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
               <span className="text-neutral-500">上下文:</span>
               <span className="text-neutral-300 truncate">
                 {activeTab?.name ?? activePath ?? currentSessionKey}

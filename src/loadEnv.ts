@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** 从当前目录向上查找 .env,最多回溯 5 层 */
+/** 从当前目录向上查找 .env,最多回溯 5 层;失败时回退到 AI_OFFICE_ENV_DIR(打包运行由宿主指定) */
 function findEnvFile(): string | null {
   let dir = __dirname;
   for (let i = 0; i < 6; i++) {
@@ -19,6 +19,12 @@ function findEnvFile(): string | null {
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
+  }
+  // 打包运行:.env 不在 dist/ 上层,改从宿主配置目录加载(如 ~/Library/Application Support/com.aipack.aioffice/.env)
+  const envDir = process.env.AI_OFFICE_ENV_DIR;
+  if (envDir) {
+    const candidate = path.join(envDir, '.env');
+    if (existsSync(candidate)) return candidate;
   }
   return null;
 }

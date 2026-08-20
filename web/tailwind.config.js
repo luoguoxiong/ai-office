@@ -10,6 +10,12 @@ export default {
       boxShadow: {
         'ux-soft': '0 1px 2px 0 rgb(0 0 0 / 0.2)',
       },
+      keyframes: {
+        thinking: {
+          '0%, 80%, 100%': { opacity: '0.3', transform: 'scale(0.8)' },
+          '40%': { opacity: '1', transform: 'scale(1)' },
+        },
+      },
     },
   },
   plugins: [],

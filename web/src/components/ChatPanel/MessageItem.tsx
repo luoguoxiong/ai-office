@@ -36,14 +36,25 @@ function _MessageItem({ msg, streaming }: { msg: ChatMessage; streaming: boolean
         {/* 思考过程块(reasoning 模型,可选) */}
         {msg.thinking && (
           <details className="mb-2 text-xs text-neutral-400 border-b border-white/10 pb-1.5">
-            <summary className="cursor-pointer select-none hover:text-neutral-200">🤔 思考过程</summary>
+            <summary className="cursor-pointer select-none hover:text-neutral-200 inline-flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-500">
+                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.5.8a2 2 0 0 0-.316 1.072v.528a2 2 0 0 1-2 2h-.5a2 2 0 0 1-2-2v-.528a2 2 0 0 0-.316-1.072l-.5-.8z" />
+              </svg>
+              思考过程
+            </summary>
             <div className="mt-1 italic">{msg.thinking}</div>
           </details>
         )}
 
-        {/* 正文 */}
+        {/* 正文:流式且暂无内容时显示三点思考动画 */}
         {isUser ? (
           <div>{displayContent}</div>
+        ) : streaming && !displayContent ? (
+          <div className="flex items-center gap-1 py-0.5" aria-label="AI 正在思考">
+            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-[thinking_1.2s_ease-in-out_infinite]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-[thinking_1.2s_ease-in-out_infinite_0.2s]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-[thinking_1.2s_ease-in-out_infinite_0.4s]" />
+          </div>
         ) : (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}

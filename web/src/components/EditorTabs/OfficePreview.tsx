@@ -82,11 +82,12 @@ export function OfficePreview() {
 
   if (activeTab.kind === 'office' && activeTab.previewUrl) {
     // previewUrl 走后端反代(同源),HTML 已注入 CSS 隐藏滚动条
+    // src 带 v=modifiedAt 查询参数:AI 修改后 modifiedAt 变化 → URL 变化 → 强制浏览器重新请求(防缓存)
     return (
       <div className="flex-1 min-h-0 bg-neutral-900">
         <iframe
           key={`${activeTab.path}:${reloadKey}`}
-          src={activeTab.previewUrl}
+          src={`${activeTab.previewUrl}?v=${reloadKey}`}
           className="w-full h-full border-0"
           title={activeTab.name}
           sandbox="allow-scripts allow-same-origin"
@@ -135,12 +136,6 @@ export function OfficePreview() {
       <p className="text-sm text-neutral-300 text-center max-w-sm">
         {activeTab.message ?? `无法预览此文件类型 (${activeTab.ext || '未知'})`}
       </p>
-      {activeTab.kind === 'error' && (
-        <p className="text-xs text-amber-400/90 max-w-md text-center leading-relaxed bg-amber-500/5 border border-amber-500/20 rounded-md px-3 py-2">
-          如需预览 Office 文档,请确保已安装 officecli:<br />
-          <code className="text-blue-300 font-mono">npm i -g @officecli/officecli</code>
-        </p>
-      )}
     </div>
   );
 }

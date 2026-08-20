@@ -23,15 +23,21 @@ import path from 'node:path';
  * 解析 officecli 二进制路径:
  * 1. 优先从本地 node_modules/@officecli/officecli/vendor/officecli 解析
  * 2. 回退到 PATH 中的全局 officecli
+ *
+ * 注意:该包 package.json 的 exports 只暴露 "."(lib/install-binary.js),
+ * require.resolve('<pkg>/package.json') 会抛 ERR_PACKAGE_PATH_NOT_EXPORTED,
+ * 导致打包后(无 node_modules/.bin 加入 PATH)解析失败。改为解析包入口文件,
+ * 再向上取包目录定位 vendor 二进制,dev 与打包布局均可用。
  */
 export function resolveOfficeCliBin(): string {
   try {
     const require = createRequire(import.meta.url);
-    const pkgJsonPath = require.resolve('@officecli/officecli/package.json');
-    const pkgDir = path.dirname(pkgJsonPath);
+    const entry = require.resolve('@officecli/officecli');
+    const pkgDir = path.dirname(path.dirname(entry));
+    const pkgJson = path.join(pkgDir, 'package.json');
     const binName = process.platform === 'win32' ? 'officecli.exe' : 'officecli';
     const binPath = path.join(pkgDir, 'vendor', binName);
-    if (fs.existsSync(binPath)) return binPath;
+    if (fs.existsSync(pkgJson) && fs.existsSync(binPath)) return binPath;
   } catch {
     // 本地未安装,回退到 PATH 全局命令
   }

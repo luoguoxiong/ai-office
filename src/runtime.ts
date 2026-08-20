@@ -205,7 +205,7 @@ export async function runOfficeAgent(
         // 关键:手动迭代器 + abort 抛错时,for-await 的隐式 gen.return() 不会跑,
         // 必须显式调用 iter.return() 触发上游 generator 的 finally 块
         // (streamWithStorageLock 里的 lock.release()),否则会话锁永久泄漏。
-        await iter.return?.();
+        await iter.return?.(undefined);
       }
     });
   } finally {

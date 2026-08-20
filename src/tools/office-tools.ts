@@ -254,10 +254,12 @@ export function createOfficeExecTool(ws: Workspace): Tool {
             `[office_exec] 执行 ${filePath}${willCreate ? '(新建)' : ''} commands=${commands.length}`,
           );
           const t0 = Date.now();
+          let execOk = false;
           try {
             const summary = await officeExecuteScript(abs, commands, { create: willCreate });
             const dur = ((Date.now() - t0) / 1000).toFixed(1);
             console.log(`[office_exec] ✓ 完成 ${filePath} ${dur}s`);
+            execOk = true;
             return {
               content: [
                 createTextContent(
@@ -271,14 +273,14 @@ export function createOfficeExecTool(ws: Workspace): Tool {
             console.error(`[office_exec] ✗ 失败 ${filePath} ${dur}s:`, (e as Error).message);
             throw e;
           } finally {
-            // 写后尝试重启预览(如文件曾被预览),让用户立刻看到最新内容
-            ensureWatch(abs).catch(() => {});
+            // 写后重启预览(等待就绪),确保前端重载时预览已可用,避免 iframe 黑屏
+            await ensureWatch(abs).catch(() => {});
+            // 仅在执行成功且预览就绪后通知前端刷新(失败则不触发,避免黑屏)
+            if (execOk) {
+              requestCtx.getStore()?.onFileModified?.(filePath);
+            }
           }
         });
-
-        // 成功执行后,通知当前请求(推送 SSE file 事件 → 前端刷新预览)
-        // requestCtx 可能为空(非 SSE 调用),此时安全跳过
-        requestCtx.getStore()?.onFileModified?.(filePath);
 
         return result;
       } catch (err) {

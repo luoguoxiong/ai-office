@@ -12,10 +12,11 @@
     "build:web": "pnpm --filter web build",
     "build": "pnpm build:web && pnpm build:server",
     "serve": "node dist/server.js",
+    "stage:resources": "node scripts/stage-resources.mjs",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && pnpm --filter web typecheck",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "pnpm build && tauri build"
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@aipack-ai/agent": "^0.0.2",

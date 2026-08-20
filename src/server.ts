@@ -417,6 +417,10 @@ async function main() {
                 delete headers['content-length'];
                 delete headers['content-encoding'];
                 delete headers['transfer-encoding'];
+                // AI 修改后前端会带新 v= 参数重载,但仍强制 no-cache 防止浏览器复用旧 HTML
+                headers['cache-control'] = 'no-cache, no-store, must-revalidate';
+                headers['pragma'] = 'no-cache';
+                headers['expires'] = '0';
                 headers['content-length'] = String(Buffer.byteLength(body, 'utf-8'));
                 res.writeHead(proxyRes.statusCode || 200, headers);
                 res.end(body);

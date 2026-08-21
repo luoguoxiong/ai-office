@@ -45,10 +45,10 @@ try {
   );
 
   // 4. 离线优先安装(store 复用项目已下载的 .pnpm-store)
-  const storePath = spawnSync('pnpm', ['store', 'path'], { encoding: 'utf8' }).stdout.trim();
-  if (!storePath) throw new Error('无法解析 pnpm store 路径');
-  const install = spawnSync(
-    'pnpm',
+  const storeResult = runPnpm(['store', 'path']);
+  if (storeResult.status !== 0 || !storeResult.stdout) throw new Error('无法解析 pnpm store 路径');
+  const storePath = storeResult.stdout.trim();
+  const install = runPnpm(
     [
       'install',
       '--prod',
@@ -107,6 +107,23 @@ try {
   console.log(`[stage:resources] 完成 → ${resDir}`);
 } finally {
   rmSync(stageDir, { recursive: true, force: true });
+}
+
+// ─── 辅助:跨平台执行 pnpm ─────────────────────────────────────────────
+// Windows 下 npm 全局安装的 pnpm 是 pnpm.cmd 脚本,Node 的 spawnSync 不带 shell
+// 时无法直接启动 .cmd/.bat(返回 ENOENT/EINVAL,stdout 为 null),而 shell:true
+// 又不会对含空格的参数加引号。这里用 cmd.exe /d /s /c 执行并手动对含空白/特殊
+// 字符的参数加引号,保证 --store-dir 等路径带空格时也能正确传参。
+function quoteCmdArg(arg) {
+  return /[\s"&|<>^]/.test(arg) ? `"${arg.replace(/"/g, '""')}"` : arg;
+}
+
+function runPnpm(args, options = {}) {
+  if (process.platform !== 'win32') {
+    return spawnSync('pnpm', args, { encoding: 'utf8', ...options });
+  }
+  const cmdline = `pnpm ${args.map(quoteCmdArg).join(' ')}`;
+  return spawnSync('cmd.exe', ['/d', '/s', '/c', cmdline], { encoding: 'utf8', ...options });
 }
 
 // ─── 辅助:解析要打包进 bundle 的 node 二进制 ─────────────────────────────

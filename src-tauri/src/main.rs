@@ -282,7 +282,7 @@ fn main() {
                 // dev 模式:beforeDevCommand 已拉起 Vite(5173) + Node(3001)
                 // tauri.conf.json 的 devUrl 已经告诉 Tauri 默认窗口加载 localhost:5173
                 // 这里只是再手动显式创建一次主窗口,统一窗口名/大小/标题
-                let dev_url: tauri::Url = "http://localhost:5173"
+                let dev_url: tauri::Url = "http://127.0.0.1:5173"
                     .parse()
                     .expect("invalid dev url");
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::External(dev_url))

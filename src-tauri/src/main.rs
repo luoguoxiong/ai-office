@@ -196,6 +196,7 @@ fn spawn_server(
     port: u16,
     res_dir: &PathBuf,
     env_dir: Option<String>,
+    data_dir: Option<String>,
 ) -> Result<Child, String> {
     // 解析 node 真实路径:优先 bundle 内置,其次 PATH/常见安装位置(GUI 启动环境 PATH 极简,不能直接写死 "node")
     let node = resolve_node(res_dir)
@@ -213,6 +214,10 @@ fn spawn_server(
     // 打包运行:.env 不在 dist/ 上层,改从宿主配置目录加载(见 loadEnv.ts)
     if let Some(ed) = env_dir {
         cmd.env("AI_OFFICE_ENV_DIR", ed);
+    }
+    // 可写数据目录:工作区、状态文件等不能放在只读的 bundle 资源目录内
+    if let Some(dd) = data_dir {
+        cmd.env("AI_OFFICE_DATA_DIR", dd);
     }
     // GUI(launchd/资源管理器)启动环境 PATH 极简:补上 node 所在目录与常见 bin 目录,
     // 保证后端内部再 spawn officecli / 其他子进程时也能按名解析
@@ -303,7 +308,12 @@ fn main() {
                     .app_config_dir()
                     .map(|d| d.to_string_lossy().to_string())
                     .ok();
-                let child = spawn_server(port, &res_dir, env_dir).map_err(std::io::Error::other)?;
+                // 可写数据目录:工作区、状态文件等放到用户目录,不能写只读的安装目录
+                let data_dir = app.path().app_data_dir().ok().and_then(|d| {
+                    std::fs::create_dir_all(&d).ok()?;
+                    Some(d.to_string_lossy().to_string())
+                });
+                let child = spawn_server(port, &res_dir, env_dir, data_dir).map_err(std::io::Error::other)?;
                 *app.state::<ServerProcess>().0.lock().unwrap() = Some(child);
                 wait_ready(port, Duration::from_secs(30)).map_err(std::io::Error::other)?;
 

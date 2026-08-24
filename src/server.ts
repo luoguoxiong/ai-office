@@ -33,7 +33,9 @@ import type { Runtime } from '@aipack-ai/agent';
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** 工作区选择持久化文件(服务重启后沿用上次选择) */
-const STATE_FILE = path.resolve(__dirname, '../.aipack/workspace-state.json');
+const STATE_FILE = process.env.AI_OFFICE_DATA_DIR
+  ? path.resolve(process.env.AI_OFFICE_DATA_DIR, '.aipack', 'workspace-state.json')
+  : path.resolve(__dirname, '../.aipack/workspace-state.json');
 /** prod 模式静态产物目录(Vite build → dist-web) */
 const STATIC_DIR = process.env.AI_OFFICE_STATIC
   ? path.resolve(process.env.AI_OFFICE_STATIC)

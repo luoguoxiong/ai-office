@@ -64,7 +64,18 @@ export function loadConfig(): AppConfig {
   const provider = 'deepseek';
   const modelId = DEFAULT_MODEL_BY_PROVIDER[provider] ?? 'deepseek-chat';
 
-  const workspace = path.resolve(__dirname, '..', process.env.OFFICE_WORKSPACE || 'office-workspace');
+  const dataDir = process.env.AI_OFFICE_DATA_DIR;
+  const workspace = (() => {
+    const envWs = process.env.OFFICE_WORKSPACE;
+    if (envWs) {
+      return path.isAbsolute(envWs)
+        ? envWs
+        : path.resolve(dataDir ?? path.resolve(__dirname, '..'), envWs);
+    }
+    return dataDir
+      ? path.join(dataDir, 'office-workspace')
+      : path.resolve(__dirname, '..', 'office-workspace');
+  })();
 
   const knownProviders = new Set(BUILTIN_PROVIDERS.map((p) => p.id));
   void knownProviders; // 保持引用避免无用告警
